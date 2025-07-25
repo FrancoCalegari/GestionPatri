@@ -1,0 +1,4 @@
+tkcalendar
+pandas
+Nuitka
+openpyxl
