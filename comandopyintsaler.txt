@@ -1,0 +1,1 @@
+pyinstaller --onefile --noconfirm --clean --windowed --icon=icono.ico --add-data "ui;ui" main.py

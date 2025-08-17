@@ -1,5 +1,7 @@
 {
+    "version": "1.0.3",
     "paths": [
+        "C:\\Users\\Gowther\\Documents\\proyectos\\GestionPatri\\recetas.db",
         "E:\\PatryGestion\\recetas.db",
         "C:\\Users\\Gowther\\Documentos\\recetario_app\\recetas.db"
     ]

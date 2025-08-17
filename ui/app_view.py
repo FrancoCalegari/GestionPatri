@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox,filedialog
+from tkinter import ttk, messagebox, filedialog
 from datetime import datetime
 import sqlite3
 from tkcalendar import DateEntry
@@ -9,16 +9,16 @@ import webbrowser
 from ui.app_info import mostrar_info
 from ui.app_formulario import abrir_formulario_receta
 import shutil
-from tkinter import filedialog, messagebox
-from database import get_db_path
 from pathlib import Path
 
 
 class RecetarioApp:
 
+    def comprobar_actualizacion(self):
+        from update_checker import verificar_actualizacion
+        verificar_actualizacion(self.root)
 
-
-    def importar_base_datos(self):
+    def importar_base_de_datos(self):
         archivo = filedialog.askopenfilename(
             title="Seleccionar base de datos para importar",
             filetypes=[("SQLite DB", "*.db")],
@@ -26,68 +26,48 @@ class RecetarioApp:
         )
         if archivo:
             try:
-                # Actualiza la ruta del config.json para que apunte al nuevo archivo importado
-                from database import set_db_path, get_db_path  # Asegúrate de tener importado esto
+                from database import set_db_path, get_db_path
                 set_db_path(archivo)
-
                 destino = get_db_path()
                 shutil.copy(archivo, destino)
-
                 messagebox.showinfo("Importación exitosa", f"La base de datos fue importada con éxito y se usará desde:\n{destino}")
-
-                # Reconecta la base con el nuevo path
                 self.conn.close()
                 self.conn = sqlite3.connect(destino)
+                self.conn.row_factory = sqlite3.Row  # <- Aquí se setea row_factory también tras reconectar
                 self.actualizar_tabla()
                 self.cargar_meses()
                 self.cargar_anios()
-
             except Exception as e:
                 messagebox.showerror("Error al importar", f"No se pudo importar la base de datos:\n{e}")
 
-
     def exportar_base_de_datos(self):
-        """Permite exportar la base de datos a una ubicación elegida"""
         ruta_origen = get_db_path()
-
         destino = filedialog.asksaveasfilename(
             defaultextension=".db",
             initialfile="recetas.db",
             filetypes=[("Base de datos SQLite", "*.db")],
             title="Exportar base de datos"
         )
-
         if not destino:
-            return  # El usuario canceló
-
+            return
         try:
             shutil.copy(ruta_origen, destino)
             messagebox.showinfo("Exportación exitosa", f"Base de datos exportada a:\n{destino}")
         except Exception as e:
             messagebox.showerror("Error al exportar", f"No se pudo exportar la base de datos:\n{e}")
 
-
-
-
     def cargar_anios(self):
         cursor = self.conn.cursor()
         cursor.execute("SELECT DISTINCT strftime('%Y', fecha_registro) AS anio FROM recetas ORDER BY anio DESC")
         anios = [row[0] for row in cursor.fetchall() if row[0] is not None]
-        
-        if not anios:
-            anios = []
-
-        print(f"Años cargados en el combo: {anios}")
-        self.anio_combo["values"] = ["Todos"] + anios
+        self.anio_combo["values"] = ["Todos"] + anios if anios else ["Todos"]
         self.anio_actual.set("Todos")
-
 
     def __init__(self, root):
         self.root = root
         self.root.title("PatryGestion - Recetario App")
         self.root.geometry("1200x600")
 
-         # Cargar ícono
         icon_path = Path(__file__).resolve().parent / "PatryGestion.ico"
         if icon_path.exists():
             try:
@@ -95,36 +75,33 @@ class RecetarioApp:
             except Exception as e:
                 print(f"[WARN] No se pudo cargar icono: {e}")
 
-        inicializar_base_de_datos()  # Asegura que la DB existe
+        inicializar_base_de_datos()
         self.conn = sqlite3.connect(get_db_path())
-
         self.mes_actual = tk.StringVar()
         self.filtro = tk.StringVar()
         self.criterio = tk.StringVar()
 
-        # Menú bar
         menubar = tk.Menu(self.root)
-
-        # Menú Archivo
         archivo_menu = tk.Menu(menubar, tearoff=0)
-        archivo_menu.add_command(label="Importar Base de Datos", command=self.importar_base_datos)
+        archivo_menu.add_command(label="Importar Base de Datos", command=self.importar_base_de_datos)
         archivo_menu.add_command(label="Exportar Base de Datos", command=self.exportar_base_de_datos)
         menubar.add_cascade(label="Archivo", menu=archivo_menu)
 
-        # Menú Ayuda
         info_menu = tk.Menu(menubar, tearoff=0)
         info_menu.add_command(label="Info", command=lambda: mostrar_info(self.root))
         menubar.add_cascade(label="Ayuda", menu=info_menu)
 
-        self.root.config(menu=menubar)
+        actualizar_menu = tk.Menu(menubar, tearoff=0)
+        actualizar_menu.add_command(label="Buscar actualizaciones", command=self.comprobar_actualizacion)
+        menubar.add_cascade(label="Actualizar", menu=actualizar_menu)
 
+        self.root.config(menu=menubar)
 
         self.crear_widgets()
         self.cargar_meses()
         self.actualizar_tabla()
         self.cargar_anios()
-
-    
+        self.root.after(3000, self.comprobar_actualizacion)
 
     def crear_widgets(self):
         top_frame = ttk.Frame(self.root)
@@ -135,7 +112,6 @@ class RecetarioApp:
         self.anio_combo = ttk.Combobox(top_frame, textvariable=self.anio_actual, state="readonly")
         self.anio_combo.pack(side="left", padx=5)
         self.anio_combo.bind("<<ComboboxSelected>>", lambda e: self.actualizar_tabla())
-
 
         ttk.Label(top_frame, text="Mes:").pack(side="left", padx=5)
         self.mes_combo = ttk.Combobox(top_frame, textvariable=self.mes_actual, state="readonly")
@@ -150,7 +126,7 @@ class RecetarioApp:
             state="readonly"
         )
         self.combo_filtro.pack(side="left")
-        self.filtro.set("Todos")  # La opción que se muestra es
+        self.filtro.set("Todos")
 
         self.entry_criterio = ttk.Entry(top_frame, textvariable=self.criterio)
         self.entry_criterio.pack(side="left", padx=5)
@@ -174,16 +150,15 @@ class RecetarioApp:
         ttk.Button(crud_frame, text="Editar", command=self.editar_receta).pack(side="left", padx=5)
         ttk.Button(crud_frame, text="Eliminar", command=self.eliminar_receta).pack(side="left", padx=5)
 
-
     def crear_receta(self):
         abrir_formulario_receta(
-        self.root,
-        self.conn,
-        self.mes_actual,
-        datos=None,  # puede ser None
-        callback_cargar_meses=self.cargar_meses,
-        callback_actualizar_tabla=self.actualizar_tabla)
-
+            self.root,
+            self.conn,
+            self.mes_actual,
+            datos=None,
+            callback_cargar_meses=self.cargar_meses,
+            callback_actualizar_tabla=self.actualizar_tabla
+        )
 
     def editar_receta(self):
         seleccion = self.tabla.selection()
@@ -192,16 +167,27 @@ class RecetarioApp:
             return
         datos = self.tabla.item(seleccion[0])["values"]
         cursor = self.conn.cursor()
+
+        # Obtener nombres de columnas
+        cursor.execute("PRAGMA table_info(recetas)")
+        columnas = [col[1] for col in cursor.fetchall()]
+
+        # Obtener fila completa
         cursor.execute("SELECT * FROM recetas WHERE id=?", (datos[0],))
-        receta = cursor.fetchone()
-        abrir_formulario_receta(
-            self.root,
-            self.conn,
-            self.mes_actual,
-            datos=receta,
-            callback_cargar_meses=self.cargar_meses,
-            callback_actualizar_tabla=self.actualizar_tabla
-        )
+        fila = cursor.fetchone()
+
+        if fila:
+            receta_dict = dict(zip(columnas, fila))  # Diccionario con nombres de campo
+            abrir_formulario_receta(
+                self.root,
+                self.conn,
+                self.mes_actual,
+                datos=receta_dict,
+                callback_cargar_meses=self.cargar_meses,
+                callback_actualizar_tabla=self.actualizar_tabla
+            )
+        else:
+            messagebox.showerror("Error", "No se encontró la receta seleccionada.")
 
 
     def eliminar_receta(self):
@@ -226,7 +212,6 @@ class RecetarioApp:
             self.mes_actual.set(meses[0])
 
     def actualizar_tabla(self):
-        # Limpiar la tabla
         for fila in self.tabla.get_children():
             self.tabla.delete(fila)
 
@@ -248,7 +233,6 @@ class RecetarioApp:
             params.append(self.anio_actual.get())
 
             print(f"Filtrando por año: {self.anio_actual.get()}")
-
         else:
             print("Filtrando por todos los años")
 
@@ -256,7 +240,6 @@ class RecetarioApp:
 
         for row in cursor.fetchall():
             self.tabla.insert("", "end", values=row)
-
 
     def buscar(self):
         if self.filtro.get() == "Todos":
@@ -279,14 +262,14 @@ class RecetarioApp:
                 "Medico": "medico",
                 "Número de Orden": "nro_orden_pami"
             }.get(self.filtro.get())
-    
+
             if not columna:
                 messagebox.showwarning("Filtro no válido", "Selecciona un filtro de búsqueda válido.")
                 return
-    
+
             criterio = f"%{self.criterio.get()}%"
             cursor = self.conn.cursor()
-    
+
             if self.anio_actual.get() and self.anio_actual.get() != "Todos":
                 query = f'''
                     SELECT id, nombre_apellido, dni, medico, diagnostico, mes, nro_orden_pami
@@ -303,10 +286,10 @@ class RecetarioApp:
                 '''
                 params = (criterio, self.mes_actual.get())
                 print("Filtrando por todos los años")
-    
+
         cursor.execute(query, params)
         resultados = cursor.fetchall()
-    
+
         for fila in self.tabla.get_children():
             self.tabla.delete(fila)
         for row in resultados:

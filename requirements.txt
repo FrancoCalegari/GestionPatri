@@ -2,3 +2,4 @@ tkcalendar
 pandas
 Nuitka
 openpyxl
+requests

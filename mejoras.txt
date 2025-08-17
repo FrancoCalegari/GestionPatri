@@ -1,0 +1,3 @@
+agregar mas campos de pami siendo numeros de orden y autorizacion
+
+siendo otra obra social agregar campos de numero de afiliado, kitsu y numero de autorizacion de la respectiva obra social

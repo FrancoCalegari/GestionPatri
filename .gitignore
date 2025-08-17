@@ -1,1 +1,8 @@
 /__pycache__
+dist
+build
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.db
