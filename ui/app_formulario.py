@@ -3,9 +3,6 @@ from tkinter import ttk, messagebox
 from tkcalendar import DateEntry
 from datetime import datetime
 import re
-
-
-
 def abrir_formulario_receta(root, conn, mes_actual, datos=None, callback_cargar_meses=None, callback_actualizar_tabla=None):
     global modo_edicion, id_registro_edicion
 
@@ -184,7 +181,6 @@ def abrir_formulario_receta(root, conn, mes_actual, datos=None, callback_cargar_
 
     for i, w in enumerate(widgets):
         w.bind("<Return>", lambda e, idx=i: focus_siguiente(e, idx))
-
     # Índices para actualizar según la obra social
     idx_obra_social = 5
     idx_orden_pami = 13
@@ -195,7 +191,6 @@ def abrir_formulario_receta(root, conn, mes_actual, datos=None, callback_cargar_
     idx_numero_autorizacion_os = 18
     idx_emision_orden = 9
     idx_mes = 12
-
     def actualizar_campos_obra_social(event=None):
         valor = widgets[idx_obra_social].get().lower()
 
@@ -245,7 +240,6 @@ def abrir_formulario_receta(root, conn, mes_actual, datos=None, callback_cargar_
             widgets[idx_emision_orden].config(state="disabled")
 
     obra_social_widget.bind("<<ComboboxSelected>>", actualizar_campos_obra_social)
-
     # Mapeo columna DB a widget índice
     mapa_columna_a_widget_idx = {
         "nombre_apellido": 0,
@@ -270,7 +264,6 @@ def abrir_formulario_receta(root, conn, mes_actual, datos=None, callback_cargar_
         "pago": 19,
         "observaciones": 20
     }
-
     # === Función para cargar datos en formulario y activar modo edición ===
     def cargar_datos_en_formulario():
         if datos:
@@ -285,10 +278,6 @@ def abrir_formulario_receta(root, conn, mes_actual, datos=None, callback_cargar_
             actualizar_campos_obra_social()
 
     cargar_datos_en_formulario()
-
-
-
-
     # === Guardar datos ===
     def guardar():
         valores_dict = {}
@@ -355,8 +344,5 @@ def abrir_formulario_receta(root, conn, mes_actual, datos=None, callback_cargar_
             callback_actualizar_tabla()
             
         print("=== FIN GUARDAR ===\n")
-
-
-
     ttk.Button(scrollable_frame, text="Guardar", command=guardar).pack(pady=10)
 
