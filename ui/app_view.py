@@ -58,8 +58,17 @@ class RecetarioApp:
 
     def cargar_anios(self):
         cursor = self.conn.cursor()
-        cursor.execute("SELECT DISTINCT strftime('%Y', fecha_registro) AS anio FROM recetas ORDER BY anio DESC")
-        anios = [row[0] for row in cursor.fetchall() if row[0] is not None]
+        cursor.execute("SELECT DISTINCT fecha_registro FROM recetas")
+        fechas = [row[0] for row in cursor.fetchall() if row[0]]
+        anios = set()
+        for fecha in fechas:
+            try:
+                # Parsear fecha en formato dd/mm/yyyy
+                anio = datetime.strptime(fecha, "%d/%m/%Y").year
+                anios.add(str(anio))
+            except Exception:
+                continue
+        anios = sorted(anios, reverse=True)
         self.anio_combo["values"] = ["Todos"] + anios if anios else ["Todos"]
         self.anio_actual.set("Todos")
 
@@ -69,6 +78,8 @@ class RecetarioApp:
         self.root.geometry("1200x600")
 
         icon_path = Path(__file__).resolve().parent / "PatryGestion.ico"
+
+        self.root.state("zoomed")  # Windows
         if icon_path.exists():
             try:
                 self.root.iconbitmap(default=str(icon_path))
@@ -159,6 +170,7 @@ class RecetarioApp:
             callback_cargar_meses=self.cargar_meses,
             callback_actualizar_tabla=self.actualizar_tabla
         )
+        self.cargar_anios()
 
     def editar_receta(self):
         seleccion = self.tabla.selection()
@@ -188,6 +200,7 @@ class RecetarioApp:
             )
         else:
             messagebox.showerror("Error", "No se encontró la receta seleccionada.")
+        self.cargar_anios()
 
 
     def eliminar_receta(self):
@@ -202,6 +215,7 @@ class RecetarioApp:
             cursor.execute("DELETE FROM recetas WHERE id=?", (id_receta,))
             self.conn.commit()
             self.actualizar_tabla()
+        self.cargar_anios()
 
     def cargar_meses(self):
         cursor = self.conn.cursor()
@@ -212,6 +226,7 @@ class RecetarioApp:
             self.mes_actual.set(meses[0])
 
     def actualizar_tabla(self):
+        self.cargar_anios()
         for fila in self.tabla.get_children():
             self.tabla.delete(fila)
 
@@ -229,7 +244,7 @@ class RecetarioApp:
             params.append(self.mes_actual.get())
 
         if self.anio_actual.get() and self.anio_actual.get() != "Todos":
-            query += " AND strftime('%Y', fecha_registro) = ?"
+            query += " AND substr(fecha_registro, 7, 4) = ?"
             params.append(self.anio_actual.get())
 
             print(f"Filtrando por año: {self.anio_actual.get()}")

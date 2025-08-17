@@ -7,6 +7,7 @@ from database import get_db_path, get_default_db_path
 
 def exportar_a_excel(mes, destino_personalizado=None):
     anio = datetime.now().year
+
     nombre_archivo = f"recetas_{mes}_{anio}.xlsx"
 
     destino_carpeta = Path(destino_personalizado) if destino_personalizado else get_default_db_path().parent
@@ -14,6 +15,7 @@ def exportar_a_excel(mes, destino_personalizado=None):
     archivo_salida = destino_carpeta / nombre_archivo
 
     db_path = get_db_path()
+    conn = None
 
     try:
         print(f"[INFO] Conectando a la base de datos en: {db_path}")
@@ -25,25 +27,36 @@ def exportar_a_excel(mes, destino_personalizado=None):
                 nombre_apellido, dni, ficha_numero, telefono, fecha_nacimiento,
                 obra_social, medico, practicas, diagnostico, emision_orden,
                 fecha_registro, fecha_entrega, mes, nro_orden_pami,
-                nro_autorizacion_pami, nro_beneficiario, pago, observaciones
+                nro_autorizacion_pami, nro_beneficiario, pago, observaciones,
+                NumeroAfiliado, KitsuCode, NumeroObraSocial
             FROM recetas
             WHERE mes = ?
         """, conn, params=(mes,))
 
+        # Asegurar que todas las columnas nuevas existan aunque no tengan datos
+        for col in ["NumeroAfiliado", "KitsuCode", "NumeroObraSocial"]:
+            if col not in df.columns:
+                df[col] = ""
+
         if df.empty:
-            messagebox.showwarning("Sin datos", f"No se encontraron recetas para el mes '{mes}'. No se generó ningún archivo.")
+            messagebox.showwarning(
+                "Sin datos", 
+                f"No se encontraron recetas para el mes '{mes}'. No se generó ningún archivo."
+            )
         else:
             df.to_excel(archivo_salida, index=False)
             print(f"[OK] Archivo generado: {archivo_salida}")
-            messagebox.showinfo("Exportación exitosa", f"Archivo generado correctamente:\n{archivo_salida}")
+            messagebox.showinfo(
+                "Exportación exitosa", 
+                f"Archivo generado correctamente:\n{archivo_salida}"
+            )
 
     except sqlite3.Error as e:
         print(f"[ERROR] Error en la base de datos: {e}")
         messagebox.showerror("Error", f"Error en la base de datos:\n{e}")
     except Exception as e:
         print(f"[ERROR] Error durante la exportación: {e}")
-        messagebox.showerror("Error", f"Ocurrió un error durante la exportación:\n{e}")
     finally:
-        if 'conn' in locals():
+        if conn is not None:
             conn.close()
             print(f"[INFO] Conexión cerrada.")

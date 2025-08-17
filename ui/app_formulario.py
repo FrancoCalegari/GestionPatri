@@ -18,6 +18,15 @@ def abrir_formulario_receta(root, conn, mes_actual, datos=None, callback_cargar_
     scrollbar = ttk.Scrollbar(ventana, orient="vertical", command=canvas.yview)
     scrollable_frame = ttk.Frame(canvas)
 
+    # Habilitar scroll con la rueda del ratón
+    def _on_mousewheel(event):
+        canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+    # Windows y Mac usan <MouseWheel>, Linux usa <Button-4>/<Button-5>
+    canvas.bind_all("<MouseWheel>", _on_mousewheel)
+    canvas.bind_all("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
+    canvas.bind_all("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
+
     scrollable_frame.bind(
         "<Configure>",
         lambda e: canvas.configure(
@@ -25,7 +34,7 @@ def abrir_formulario_receta(root, conn, mes_actual, datos=None, callback_cargar_
         )
     )
 
-    canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+    canvas.create_window((0, 0), window=scrollable_frame, anchor="nw", width=400)
     canvas.configure(yscrollcommand=scrollbar.set)
 
     canvas.pack(side="left", fill="both", expand=True)
@@ -71,7 +80,7 @@ def abrir_formulario_receta(root, conn, mes_actual, datos=None, callback_cargar_
             widget = ttk.Combobox(parent, values=values, state="readonly")
         else:
             widget = ttk.Entry(parent)
-        widget.pack(fill="x", pady=2)
+        widget.pack(fill="x", pady=2, expand=True)
         widgets.append(widget)
         return widget
 
@@ -167,6 +176,15 @@ def abrir_formulario_receta(root, conn, mes_actual, datos=None, callback_cargar_
     crear_entry(frame4, "Pago")          # idx 19
     crear_entry(frame4, "Observaciones") # idx 20
 
+    # ======= Agregar enfoque con Enter =======
+    def focus_siguiente(event, idx):
+        if idx + 1 < len(widgets):
+            widgets[idx + 1].focus_set()
+        return "break"  # evita el beep de Enter
+
+    for i, w in enumerate(widgets):
+        w.bind("<Return>", lambda e, idx=i: focus_siguiente(e, idx))
+
     # Índices para actualizar según la obra social
     idx_obra_social = 5
     idx_orden_pami = 13
@@ -195,11 +213,6 @@ def abrir_formulario_receta(root, conn, mes_actual, datos=None, callback_cargar_
             widgets[idx_emision_orden].config(state="normal")
             widgets[idx_mes].config(state="normal")
 
-            label_nombre_obra.pack_forget()
-            widgets[idx_obra_social].pack_forget()
-
-            frame3_os.pack_forget()
-
         elif valor == "obra social":
             frame3_os.pack(fill="x", padx=10, pady=5)
             frame3.pack_forget()
@@ -220,8 +233,6 @@ def abrir_formulario_receta(root, conn, mes_actual, datos=None, callback_cargar_
             widgets[idx_obra_social].pack()
 
         elif valor == "particular":
-            frame3.pack_forget()
-            frame3_os.pack_forget()
 
             for idx in [idx_orden_pami, idx_autorizacion_pami, idx_beneficiario,
                         idx_numero_afiliado, idx_kitsu_code, idx_numero_autorizacion_os]:
@@ -232,9 +243,6 @@ def abrir_formulario_receta(root, conn, mes_actual, datos=None, callback_cargar_
 
             widgets[idx_emision_orden].set_date(datetime.today())
             widgets[idx_emision_orden].config(state="disabled")
-
-            label_nombre_obra.pack_forget()
-            widgets[idx_obra_social].pack_forget()
 
     obra_social_widget.bind("<<ComboboxSelected>>", actualizar_campos_obra_social)
 
