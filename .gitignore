@@ -6,3 +6,4 @@ build
 *.pyd
 *.sqlite3
 *.db
+*.zip

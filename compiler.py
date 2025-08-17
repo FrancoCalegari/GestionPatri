@@ -9,6 +9,7 @@ DIST_PATH = "dist"
 BUILD_NAME = "PatryGestion"
 
 def actualizar_version_config(version_str):
+    """Actualiza la versión en config.json"""
     try:
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             config = json.load(f)
@@ -22,8 +23,8 @@ def actualizar_version_config(version_str):
 
     print(f"\n✅ Versión '{version_str}' guardada en config.json\n")
 
-
 def obtener_version_actual():
+    """Lee la versión actual desde config.json"""
     try:
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             config = json.load(f)
@@ -31,36 +32,31 @@ def obtener_version_actual():
     except Exception:
         return "0.0.0"
 
-
 def limpiar():
     os.system('cls' if os.name == 'nt' else 'clear')
 
-
 def construir_comando(noconsole=True, icono=True, incluir_config=True):
     comando = ["pyinstaller"]
-
     if noconsole:
         comando.append("--noconsole")
-
     comando.append("--onefile")
     comando.append(f"--name={BUILD_NAME}")
-
     if icono:
         comando.append("--icon=icon.ico")
-
+    # Incluir config.json en el exe
     if incluir_config:
-        comando.append('--add-data=config.json;.')
-
+        comando.append(f'--add-data={CONFIG_PATH};.')
     comando.append("main.py")
     return comando
-
 
 def ejecutar_comando(comando):
     print("\n🛠 Ejecutando comando:")
     print(" ".join(comando))
     subprocess.run(comando)
+    # Copiar config.json al dist para que el exe pueda leerlo
+    if os.path.exists(CONFIG_PATH):
+        shutil.copy(CONFIG_PATH, os.path.join(DIST_PATH, CONFIG_PATH))
     empaquetar_zip()
-
 
 def empaquetar_zip():
     version = obtener_version_actual()
@@ -73,6 +69,10 @@ def empaquetar_zip():
 
     with ZipFile(zip_name, 'w') as zipf:
         zipf.write(exe_path, arcname=f"{BUILD_NAME}.exe")
+        # También agregamos config.json al ZIP
+        config_in_dist = os.path.join(DIST_PATH, CONFIG_PATH)
+        if os.path.exists(config_in_dist):
+            zipf.write(config_in_dist, arcname=CONFIG_PATH)
 
     print(f"\n📦 Empaquetado exitoso: {zip_name}")
 
