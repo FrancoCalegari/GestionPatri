@@ -82,10 +82,12 @@ def get_db_path():
     return str(_db_custom_path if _db_custom_path else get_default_db_path())
 
 def inicializar_base_de_datos():
-    """Crea la base de datos y su tabla si no existen"""
+    """Crea la base de datos y su tabla si no existen, y agrega columnas nuevas si faltan"""
     ruta = get_db_path()
     conn = sqlite3.connect(ruta)
     cursor = conn.cursor()
+
+    # Crear tabla base
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS recetas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,8 +112,26 @@ def inicializar_base_de_datos():
         )
     ''')
     conn.commit()
+
+    # Campos nuevos requeridos
+    columnas_requeridas = {
+        "NumeroAfiliado": "TEXT",     # Para otra obra social
+        "KitsuCode": "TEXT",          # Código Kitsu
+        "NumeroObraSocial": "TEXT"    # Autorización de otra obra social
+    }
+
+    # Revisar columnas existentes
+    cursor.execute("PRAGMA table_info(recetas)")
+    columnas_existentes = [col[1] for col in cursor.fetchall()]
+
+    # Agregar las que falten
+    for col, tipo in columnas_requeridas.items():
+        if col not in columnas_existentes:
+            cursor.execute(f"ALTER TABLE recetas ADD COLUMN {col} {tipo}")
+            print(f"[DB] Columna agregada: {col} ({tipo})")
+
+    conn.commit()
     conn.close()
-    
 
 def importar_base_de_datos():
     """Permite al usuario seleccionar una base de datos existente para usarla"""
